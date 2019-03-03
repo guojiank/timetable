@@ -1,4 +1,4 @@
-import styles from './layout.css';
+import styles from './index.css';
 import { Table } from 'antd';
 import 'antd/dist/antd.css';
 import React, { Component } from 'react';
