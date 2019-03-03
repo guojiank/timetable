@@ -1,65 +1,26 @@
-// import styles from './index.css';
-import layout_styles from './layout.css';
+import styles from './layout.css';
 import { Table } from 'antd';
-import { getWeekOfYear, getArray } from '../util/week';
 import 'antd/dist/antd.css';
 import React, { Component } from 'react';
-import dataSource from '../data/2019_the_first_term';
-import { Radio, Button } from 'antd';
-import { Select } from 'antd';
+import { Radio, Button, Select } from 'antd';
+import { connect } from 'dva';
 const Option = Select.Option;
 
-const weeks = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const mapStateToProps = state => {
+  let currentState = state['timetable'];
+  return {
+    ...currentState,
+  };
+};
 
+@connect(mapStateToProps)
 class Index extends Component {
-  // 减8 是因为这个学期是从2019年的第8周开始的
-  state = { data: [], week: getWeekOfYear() - 8 };
-
-  filter = 'name';
-  options = getArray();
-
-  update = () => {
-    let data = [];
-    let { week } = this.state;
-    for (let i = 1; i <= 11; i++) {
-      let class_obj = {};
-      class_obj['key'] = i;
-      weeks.forEach(w => {
-        let obj = dataSource
-          .filter(e => {
-            if (e.weeks.filter !== undefined) {
-              if (e.weeks.filter === 'double') {
-                return e.weeks.begin <= week && e.weeks.end >= week && week % 2 === 0;
-              }
-            } else {
-              return e.weeks.begin <= week && e.weeks.end >= week;
-            }
-          })
-          .filter(e => e.day === w)
-          .filter(e => e.classes.indexOf(i) !== -1);
-
-        let class_name = obj.length > 0 ? obj[0][this.filter] : '';
-        class_obj[w] = class_name;
-      });
-      data.push(class_obj);
-    }
-    this.setState({ data: data });
-  };
-
   componentWillMount() {
-    this.update();
+    const { dispatch } = this.props;
+    dispatch({
+      type: 'timetable/initData',
+    });
   }
-
-  handChange = v => {
-    if (v === undefined) return;
-    this.setState({ week: v });
-    this.update();
-  };
-
-  handleBackDay = () => {
-    let today = getWeekOfYear() - 8;
-    this.handChange(today);
-  };
 
   render() {
     const columns = [
@@ -136,17 +97,16 @@ class Index extends Component {
       },
     ];
 
-    console.info(this.filter);
+    const { dispatch } = this.props;
     return (
       <div>
-        <h1 className={layout_styles.title}>2019年上学期第{this.state.week}周 课程表</h1>
+        <h1 className={styles.title}>2019年上学期第{this.props.currentWeek}周 课程表</h1>
         <br />
         <br />
         <div>
           <Radio.Group
             onChange={e => {
-              this.filter = e.target.value;
-              this.update();
+              dispatch({ type: 'timetable/changeFilter', payload: e.target.value });
             }}
             defaultValue="name"
           >
@@ -157,23 +117,37 @@ class Index extends Component {
 
           <Select
             defaultValue="第1周"
-            value={this.state.week}
+            value={this.props.currentWeek}
             style={{ width: 120 }}
-            onChange={this.handChange}
+            onChange={value => {
+              dispatch({
+                type: 'timetable/changeCurrentWeek',
+                payload: value,
+              });
+            }}
           >
-            {this.options.map(e => (
+            {this.props.selectOptions.map(e => (
               <Option key={e} value={e}>
                 第{e}周
               </Option>
             ))}
           </Select>
-          <Button onClick={this.handleBackDay}>回到本周</Button>
+
+          <Button
+            onClick={() => {
+              dispatch({
+                type: 'timetable/backToCurrentWeek',
+              });
+            }}
+          >
+            回到本周
+          </Button>
         </div>
         <br />
         <Table
           pagination={{ pageSize: 11 }}
           columns={columns}
-          dataSource={this.state.data}
+          dataSource={this.props.data}
           bordered
         />
       </div>
